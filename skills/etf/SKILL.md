@@ -73,14 +73,12 @@ python scripts/etf_compare.py 510300 500
 
 ### etf_daily_share - 每日份额
 
-| 字段        | 类型    | 说明           |
-| ----------- | ------- | -------------- |
-| sec_code    | TEXT    | ETF代码 (PK)   |
-| stat_date   | TEXT    | 日期 (PK)      |
-| tot_vol     | REAL    | 总份额（万份） |
-| num         | INTEGER | 排名           |
-| close_price | REAL    | 收盘价         |
-| market      | TEXT    | 交易所         |
+| 字段      | 类型    | 说明           |
+| --------- | ------- | -------------- |
+| sec_code  | TEXT    | ETF代码 (PK)   |
+| stat_date | TEXT    | 日期 (PK)      |
+| tot_vol   | REAL    | 总份额（万份） |
+| num       | INTEGER | 排名           |
 
 ### etf_top_holders - ETF十大持有人
 
@@ -92,6 +90,5 @@ python scripts/etf_compare.py 510300 500
 | holder_name | TEXT    | 持有人名称         |
 | holder_share| REAL    | 持有份额（份）     |
 | holder_pct  | REAL    | 占总份额比（%）    |
-| create_at | TEXT | 日期 |
 
 > 数据来源：新浪财经基金档案页，每年4-5月更新年报，8-9月更新半年报。实时性约滞后4-5个月。
