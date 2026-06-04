@@ -40,6 +40,9 @@ python -m src.etf.cli top_pct 10
 # 查看某ETF趋势
 python -m src.etf.cli trend 512880
 
+# 查看ETF份额-价格详细走势
+python -m src.etf.cli detail 5181 30
+
 # 检查数据完整性
 python -m src.etf.cli check
 

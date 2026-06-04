@@ -8,6 +8,7 @@ from .fetcher_holders import update_holders
 from .queries import (
     query_rising_etfs,
     query_etf_trend,
+    query_etf_detail,
     query_securities_etf,
     query_top_etfs,
     check_data_completeness, query_etf_info,
@@ -41,6 +42,7 @@ ETF份额数据分析工具
     python -m src.etf.cli fetch_szse [天数]    # 采集深交所数据
     python -m src.etf.cli query              # 查询份额上升的ETF
     python -m src.etf.cli trend [代码]       # 查看某ETF趋势
+    python -m src.etf.cli detail [代码] [天数]  # 查看ETF份额-价格详细走势
     python -m src.etf.cli check              # 检查数据完整性
     python -m src.etf.cli securities          # 查看证券ETF份额变化
     python -m src.etf.cli top [n]           # 查看份额增加最多的n只ETF
@@ -77,6 +79,27 @@ ETF份额数据分析工具
         print("-" * 35)
         for date, vol in results[-20:]:
             print(f"{date:<12} {vol:>18.2f}")
+    elif cmd == 'detail':
+        sec_code = sys.argv[2] if len(sys.argv) > 2 else '510050'
+        days = int(sys.argv[3]) if len(sys.argv) > 3 else 30
+        etf_info = query_etf_info(sec_code)
+        if etf_info is None:
+            print(f"ETF {sec_code} not found")
+            return
+        results = query_etf_detail(sec_code, days)
+        print(f"\n{etf_info['full_name']} ({sec_code}) 份额-价格走势")
+        print(f"{'='*115}")
+        print(f"{'日期':<12} {'份额(万)':>14} {'日变化':>12} {'份额增幅':>9} {'价格':>8} {'日收益':>8} {'排名':>5}")
+        print(f"{'-'*115}")
+        for row in results:
+            stat_date, tot_vol, daily_chg, daily_chg_pct, close_price, daily_ret, num = row
+            chg_str   = f'{daily_chg:>+12,.0f}' if daily_chg else '           ·'
+            pct_str   = f'{daily_chg_pct:>+8.2f}%' if daily_chg_pct is not None else '       ·'
+            price_str = f'{close_price:>8.3f}' if close_price else '   N/A'
+            ret_str   = f'{daily_ret:>+7.2f}%' if daily_ret is not None else '      ·'
+            rank_str  = f'{num:>5}' if num else '    ·'
+            print(f'{stat_date:<12} {tot_vol:>14,.0f} {chg_str} {pct_str} {price_str} {ret_str} {rank_str}')
+        print(f"{'='*115}")
     elif cmd == 'check':
         daily_counts = check_data_completeness()
         print("Data Completeness Check:")
@@ -96,7 +119,8 @@ ETF份额数据分析工具
         print(f'{"代码":<10} {"名称":<20} {"上日份额(万)":>14} {"最新份额(万)":>14} {"变化(万)":>12} {"增幅":>10}')
         print('-' * 120)
         for row in results:
-            print(f'{row[0]:<10} {row[1]:<20} {row[3]:>14.2f} {row[2]:>14.2f} {row[4]:>+12.2f} {row[5]:>+9.2f}%')
+            name = (row[1] or row[0])[:18]
+            print(f'{row[0]:<10} {name:<20} {row[3]:>14.2f} {row[2]:>14.2f} {row[4]:>+12.2f} {row[5]:>+9.2f}%')
         print('=' * 120)
     elif cmd == 'top':
         n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
@@ -108,7 +132,8 @@ ETF份额数据分析工具
         print(f'{"排名":<4} {"代码":<10} {"名称":<20} {"最新份额(万)":>16} {"变化(万)":>12} {"增幅":>10}')
         print('-' * 120)
         for i, row in enumerate(results, 1):
-            print(f'{i:<4} {row[0]:<10} {row[1]:<20} {row[2]:>16.2f} {row[4]:>+12.2f} {row[5]:>+9.2f}%')
+            name = (row[1] or row[0])[:18]
+            print(f'{i:<4} {row[0]:<10} {name:<20} {row[2]:>16.2f} {row[4]:>+12.2f} {row[5]:>+9.2f}%')
         print('=' * 120)
     elif cmd == 'top_pct':
         n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
@@ -120,7 +145,8 @@ ETF份额数据分析工具
         print(f'{"排名":<4} {"代码":<10} {"名称":<20} {"最新份额(万)":>16} {"变化(万)":>12} {"增幅":>10}')
         print('-' * 120)
         for i, row in enumerate(results, 1):
-            print(f'{i:<4} {row[0]:<10} {row[1]:<20} {row[2]:>16.2f} {row[4]:>+12.2f} {row[5]:>+9.2f}%')
+            name = (row[1] or row[0])[:18]
+            print(f'{i:<4} {row[0]:<10} {name:<20} {row[2]:>16.2f} {row[4]:>+12.2f} {row[5]:>+9.2f}%')
         print('=' * 120)
     elif cmd == 'update_names':
         update_full_names()

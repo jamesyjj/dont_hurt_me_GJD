@@ -18,9 +18,9 @@ node_modules/
 *.log
 
 # Data (local development only)
-data/*.db
-data/*.sqlite
-data/
+#data/*.db
+#data/*.sqlite
+#data/
 
 # OS
 .DS_Store

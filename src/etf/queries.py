@@ -191,6 +191,55 @@ def query_top_etfs(n: int = 10, by: str = 'change') -> Tuple:
     return results, latest_date, prev_date
 
 
+def query_etf_detail(sec_code: str, days: int = 30) -> List[Tuple]:
+    """查询某ETF的份额+价格+排名详细走势
+
+    Returns:
+        [(stat_date, tot_vol, daily_chg, daily_chg_pct, close_price, daily_ret, rank), ...]
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT stat_date, tot_vol, close_price, num
+        FROM etf_daily_share
+        WHERE sec_code = ?
+        ORDER BY stat_date DESC
+        LIMIT ?
+    ''', (sec_code, days))
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        return []
+
+    rows = list(reversed(rows))  # 按时间升序
+
+    result = []
+    prev_vol = None
+    prev_price = None
+
+    for stat_date, tot_vol, close_price, num in rows:
+        # 日份额变化 & 份额增幅
+        daily_chg = 0
+        daily_chg_pct = None
+        if prev_vol is not None and tot_vol != prev_vol and prev_vol > 0:
+            daily_chg = tot_vol - prev_vol
+            daily_chg_pct = round(daily_chg / prev_vol * 100, 2)
+
+        # 日价格收益
+        daily_ret = None
+        if prev_price and close_price and prev_price:
+            daily_ret = round((close_price - prev_price) / prev_price * 100, 2)
+
+        result.append((stat_date, tot_vol, daily_chg, daily_chg_pct, close_price, daily_ret, num))
+
+        prev_vol = tot_vol
+        if close_price:
+            prev_price = close_price
+
+    return result
+
+
 def check_data_completeness() -> List[Tuple]:
     """检查数据库数据完整性"""
     conn = get_connection()

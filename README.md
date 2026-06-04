@@ -62,7 +62,10 @@ python -m src.etf.cli top 10
 python -m src.etf.cli top_pct 10
 
 # 查看某ETF趋势
-python -m src.etf.cli trend 510330
+python -m src.etf.cli trend 512690
+
+# 查看ETF份额-价格详细走势（含日变化/日收益/排名）
+python -m src.etf.cli detail 513180 30
 
 # 检查数据完整性
 python -m src.etf.cli check
@@ -74,7 +77,7 @@ python -m src.etf.cli update_names
 python -m src.etf.cli holders      
 
 # 查看某ETF十大持有人        
-python -m src.etf.cli holders 512370      
+python -m src.etf.cli holders 513180   
 
 # 按持有人类型查询（如：保险/信托/私募） 
 python -m src.etf.cli holders_type 汇金    
@@ -85,7 +88,10 @@ python -m src.etf.cli holders_type 汇金
 
 ```bash
 # 生成ETF趋势HTML图
-python scripts/etf_trend.py 512880 500
+python scripts/etf_trend.py 513180 500
+
+# ETF价格-份额双折线图
+python scripts/etf_price_volume.py 513180 2026-05-01 2026-06-03
 
 # 对比两只ETF
 python scripts/etf_compare.py 512880 512070
@@ -108,15 +114,16 @@ python scripts/huijin_analysis.py
 | etf_type | TEXT | ETF类型 |
 
 ### etf_daily_share - 每日份额
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| sec_code | TEXT | ETF代码 (PK) |
-| stat_date | TEXT | 日期 (PK) |
-| tot_vol | REAL | 总份额（万份） |
-| num | INTEGER | 排名 |
+| 字段        | 类型    | 说明           |
+| ----------- | ------- | -------------- |
+| sec_code    | TEXT    | ETF代码 (PK)   |
+| stat_date   | TEXT    | 日期 (PK)      |
+| tot_vol     | REAL    | 总份额（万份） |
+| num         | INTEGER | 排名           |
+| close_price | REAL    | 收盘价         |
+| market      | TEXT    | 交易所         |
 
 ### etf_top_holders - ETF十大持有人
-
 | 字段        | 类型    | 说明               |
 | ----------- | ------- | ------------------ |
 | sec_code    | TEXT    | ETF代码            |
@@ -125,6 +132,7 @@ python scripts/huijin_analysis.py
 | holder_name | TEXT    | 持有人名称         |
 | holder_share| REAL    | 持有份额（份）     |
 | holder_pct  | REAL    | 占总份额比（%）    |
+| create_at | TEXT | 日期 |
 
 *数据来源：新浪财经基金档案页，每年4-5月更新年报，8-9月更新半年报。实时性约滞后4-5个月。*
 
