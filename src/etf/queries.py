@@ -240,6 +240,89 @@ def query_etf_detail(sec_code: str, days: int = 30) -> List[Tuple]:
     return result
 
 
+def query_huijin_etf_trend(days: int = 10) -> List[Tuple]:
+    """查询汇金系持仓ETF的份额-价格走势
+
+    从十大持有人中筛选汇金系（汇金/证金）持仓占比>=0.5%的ETF，
+    同一ETF代码只取占比最高的一条（去重）。
+
+    Returns:
+        [(sec_code, sec_name, holder_pct, [(stat_date, tot_vol, close_price), ...]), ...]
+        按 holder_pct 降序排列
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # 获取最新报告期
+    cursor.execute('SELECT stat_date FROM etf_top_holders GROUP BY stat_date ORDER BY COUNT(*) DESC LIMIT 1')
+    latest_report = cursor.fetchone()[0]
+
+    # 汇金系ETF代码（去重，取同一代码中占比最高的那条）
+    cursor.execute('''
+        SELECT h.sec_code, MAX(h.holder_pct) as max_pct
+        FROM etf_top_holders h
+        WHERE h.stat_date = ?
+          AND (h.holder_name LIKE '%汇金%' OR h.holder_name LIKE '%证金%')
+          AND h.holder_pct >= 0.5
+        GROUP BY h.sec_code
+        ORDER BY max_pct DESC
+        LIMIT 50
+    ''', (latest_report,))
+    huijin_codes = cursor.fetchall()
+
+    if not huijin_codes:
+        conn.close()
+        return []
+
+    # 获取这些ETF的名称和最近days天的份额/价格
+    placeholders = ','.join(['?' for _ in huijin_codes])
+    codes = [c[0] for c in huijin_codes]
+    pct_map = {c[0]: c[1] for c in huijin_codes}
+
+    # 获取最近日期范围
+    cursor.execute('''
+        SELECT DISTINCT stat_date FROM etf_daily_share
+        ORDER BY stat_date DESC LIMIT ?
+    ''', (days + 5,))  # 多取几天防止节假日缺失
+    all_dates = sorted([d[0] for d in cursor.fetchall()])
+    recent_dates = all_dates[-days:] if len(all_dates) >= days else all_dates
+
+    # 批量获取每个ETF在最近日期的数据
+    cursor.execute(f'''
+        SELECT d.sec_code, d.stat_date, d.tot_vol, d.close_price, i.sec_name
+        FROM etf_daily_share d
+        JOIN etf_info i ON d.sec_code = i.sec_code
+        WHERE d.sec_code IN ({placeholders})
+          AND d.stat_date >= ?
+        ORDER BY d.sec_code, d.stat_date
+    ''', codes + [recent_dates[0]])
+
+    # 组织数据: {code: {name, pct, dates: {date: (vol, price)}}}
+    raw = {}
+    name_map = {}
+    for row in cursor.fetchall():
+        code, date, vol, price, name = row
+        if code not in raw:
+            raw[code] = {}
+            name_map[code] = name or code
+        raw[code][date] = (vol, price)
+
+    conn.close()
+
+    # 按日期对齐，只保留有数据的最近days天
+    result = []
+    for code, max_pct in huijin_codes:
+        name = name_map.get(code, code)
+        data = []
+        for d in recent_dates:
+            if d in raw.get(code, {}):
+                data.append((d, raw[code][d][0], raw[code][d][1]))
+        if data:
+            result.append((code, name, max_pct, data))
+
+    return result
+
+
 def check_data_completeness() -> List[Tuple]:
     """检查数据库数据完整性"""
     conn = get_connection()

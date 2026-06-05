@@ -51,6 +51,9 @@ python scripts/etf_trend.py 512880 500
 
 # 生成对比图
 python scripts/etf_compare.py 510300 500
+
+# 汇金系持仓ETF份额/价格走势（控制台Top10 + CSV全量）
+python -m src.etf.cli huijin 10
 ```
 
 ## 数据更新时机

@@ -2,6 +2,7 @@
 ETF命令行工具
 """
 import sys
+import os
 from .fetcher import fetch_data, update_full_names
 from .fetcher_szse import fetch_data as fetch_szse_data
 from .fetcher_holders import update_holders
@@ -9,6 +10,7 @@ from .queries import (
     query_rising_etfs,
     query_etf_trend,
     query_etf_detail,
+    query_huijin_etf_trend,
     query_securities_etf,
     query_top_etfs,
     check_data_completeness, query_etf_info,
@@ -51,6 +53,7 @@ ETF份额数据分析工具
     python -m src.etf.cli holders            # 采集所有ETF十大持有人数据
     python -m src.etf.cli holders [代码]     # 查看某ETF十大持有人
     python -m src.etf.cli holders_type [关键词] # 按持有人类型查询(如:保险/信托/私募)
+    python -m src.etf.cli huijin [天数]      # 汇金系持仓ETF份额/价格走势（控制台Top10+CSV全量）
 """)
         sys.exit(1)
 
@@ -100,6 +103,79 @@ ETF份额数据分析工具
             rank_str  = f'{num:>5}' if num else '    ·'
             print(f'{stat_date:<12} {tot_vol:>14,.0f} {chg_str} {pct_str} {price_str} {ret_str} {rank_str}')
         print(f"{'='*115}")
+    elif cmd == 'huijin':
+        days = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+        results = query_huijin_etf_trend(days)
+        if not results:
+            print('未找到汇金系持仓ETF数据')
+            return
+
+        # 收集所有日期并去重排序
+        all_dates = set()
+        for _, _, _, data in results:
+            for d, _, _ in data:
+                all_dates.add(d)
+        dates = sorted(all_dates)
+
+        # 构建 {code: {date: (vol, price)}} 查找表
+        etf_map = {}
+        for code, name, pct, data in results:
+            etf_map[code] = {
+                'name': name, 'pct': pct,
+                'dmap': {d: (v, p) for d, v, p in data}
+            }
+
+        # ── 控制台：前10只 ──
+        top10 = results[:10]
+        N = len(top10)
+        COL_W = 15  # 每列宽度 "2819929/4.93"
+        SEP_W = 12 + N * (COL_W + 1)  # 日期 + N列
+        print(f'\n汇金系持仓ETF份额/价格走势 Top{N}（近{days}天）')
+        print(f'{"="*SEP_W}')
+        # 表头行1: 代码
+        header1 = f'{"日期":<12}'
+        header2 = f'{"":12}'
+        for code, name, pct, _ in top10:
+            short_name = name[:8] if name else code
+            header1 += f' {code:<{COL_W}}'
+            header2 += f' {f"{short_name}({pct:.1f}%)":<{COL_W}}'
+        print(header1)
+        print(header2)
+        print(f'{"-"*SEP_W}')
+        # 数据行
+        for d in dates:
+            row_str = f'{d:<12}'
+            for code, _, _, _ in top10:
+                entry = etf_map[code]['dmap'].get(d)
+                if entry:
+                    vol, price = entry
+                    cell = f'{vol:,.0f}/{price:.3f}' if price else f'{vol:,.0f}/-'
+                else:
+                    cell = '-'
+                row_str += f' {cell:>{COL_W}}'
+            print(row_str)
+        print(f'{"="*SEP_W}')
+        print(f'共 {len(results)} 只ETF，控制台显示前{N}只')
+
+        # ── CSV：全量导出 ──
+        csv_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            'data', 'huijin_etf_trend.csv'
+        )
+        with open(csv_path, 'w', encoding='utf-8-sig') as f:
+            # 表头: 日期, 代码(名称,汇金占比), ...
+            headers = ['日期'] + [f'{code}({etf_map[code]["name"]},{etf_map[code]["pct"]:.1f}%)' for code, _, _, _ in results]
+            f.write(','.join(headers) + '\n')
+            for d in dates:
+                cells = [d]
+                for code, _, _, _ in results:
+                    entry = etf_map[code]['dmap'].get(d)
+                    if entry:
+                        cells.append(f'{entry[0]:.0f}/{entry[1]:.3f}' if entry[1] else f'{entry[0]:.0f}/-')
+                    else:
+                        cells.append('-')
+                f.write(','.join(cells) + '\n')
+        print(f'全量数据已导出: {csv_path}')
     elif cmd == 'check':
         daily_counts = check_data_completeness()
         print("Data Completeness Check:")

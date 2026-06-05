@@ -82,6 +82,9 @@ python -m src.etf.cli holders 513180
 # 按持有人类型查询（如：保险/信托/私募） 
 python -m src.etf.cli holders_type 汇金    
 
+# 汇金系持仓ETF份额/价格走势（控制台Top10+CSV全量）
+python -m src.etf.cli huijin 20
+
 ```
 
 ### 独立脚本
@@ -99,8 +102,10 @@ python scripts/etf_compare.py 512880 512070
 # 查询某ETF的汇金系持仓及估算买卖情况
 python scripts/huijin_etf.py 510330
 
-# 汇金系ETF买卖趋势分析
+# 汇金系ETF买卖趋势分析 基准日2025.12.31
 python scripts/huijin_analysis.py
+
+
 ```
 
 ## 数据库表结构

@@ -8,6 +8,22 @@ user-invocable: true
 
 基于上海证券交易所数据的ETF份额分析工具。
 
+## 文档同步约定
+
+当用户说「更新skill」「更新readme」「同步文档」等指令时，必须同步更新以下 **4个文件**：
+
+| 文件 | 说明 |
+|------|------|
+| `.claude/skills/etf/SKILL.md` | Claude Code 技能定义（主） |
+| `skills/etf/SKILL.md` | 项目内技能副本（与上保持完全一致） |
+| `README.md` | 项目说明文档 |
+| `CLAUDE.md` | 项目级 Claude 指令 |
+
+**同步规则**：
+- 新增 CLI 命令或脚本 → 4个文件都要加
+- SKILL.md 两份文件内容必须完全一致，用 `cp` 同步
+- README.md 和 CLAUDE.md 的命令列表保持对齐
+
 ## 数据更新时机
 
 **重要**: A股清算后数据才更新，约晚上8-10点后能查到当天数据。白天查不到当天数据是正常的。
@@ -54,17 +70,23 @@ python -m src.etf.cli holders 512880       # 查看某ETF十大持有人
 python -m src.etf.cli holders_type 保险    # 按持有人类型查询（如：保险/信托/私募）
 ```
 
-### 7. 生成趋势图HTML
+### 7. 汇金系持仓ETF走势
+```bash
+# 控制台显示Top10汇金系持仓ETF近N天的份额/价格变化，全量导出CSV
+python -m src.etf.cli huijin 10
+```
+
+### 8. 生成趋势图HTML
 ```bash
 python scripts/etf_trend.py 512880 500
 ```
 
-### 8. 生成ETF对比图
+### 9. 生成ETF对比图
 ```bash
 python scripts/etf_compare.py 510300 500
 ```
 
-### 9. 价格-份额双折线图HTML
+### 10. 价格-份额双折线图HTML
 ```bash
 # 指定日期范围生成Plotly双折线图
 python scripts/etf_price_volume.py 513180 2026-05-01 2026-06-03
@@ -208,3 +230,37 @@ from .queries import (
 | `TypeError: NoneType.__format__` | 数据库字段为NULL | 用 `(val or fallback)` 兜底 |
 | 中文输出乱码 | Windows GBK编码 | 用 `chcp 65001` 或忽略，不影响功能 |
 | 格式化列对不齐 | 中文字符宽度 | 中文列宽=2字节，适当加宽 |
+| CSV路径错误 `src/data/...` | `__file__` 层级不对 | 从 `src/etf/cli.py` 需 `parent × 3` 到项目根 |
+
+### 特殊模式：宽表格透视 + CSV导出
+
+当需要输出「日期为行、多只ETF为列」的透视表格时：
+
+```python
+# 1) 查询函数返回: [(code, name, pct, [(date, vol, price), ...]), ...]
+
+# 2) CLI: 对齐所有日期的数据
+all_dates = sorted({d for _, _, _, data in results for d, _, _ in data})
+etf_map = {code: {'dmap': {d: (v, p) for d, v, p in data}, 'name': name, 'pct': pct} for code, name, pct, data in results}
+
+# 3) 控制台: 前N只作为列，双行表头（代码行+名称(占比)行）
+topN = results[:10]
+COL_W = 15  # 每列宽，容纳 "2819929/4.93"
+SEP_W = 12 + len(topN) * (COL_W + 1)
+for d in dates:
+    cells = [d]
+    for code, _, _, _ in topN:
+        entry = etf_map[code]['dmap'].get(d)
+        cells.append(f'{entry[0]:,.0f}/{entry[1]:.3f}' if entry else '-')
+    print(' '.join(f'{c:>{COL_W}}' if i > 0 else f'{c:<12}' for i, c in enumerate(cells)))
+
+# 4) CSV: 全量导出，encoding='utf-8-sig'（Excel兼容中文）
+csv_path = os.path.join(PROJECT_ROOT, 'data', 'huijin_etf_trend.csv')
+with open(csv_path, 'w', encoding='utf-8-sig') as f:
+    headers = ['日期'] + [f'{code}({name},{pct:.1f}%)' for code, name, pct, _ in results]
+    f.write(','.join(headers) + '\n')
+    for d in dates:
+        row = [d] + [f'{v:,.0f}/{p:.3f}' if (entry := etf_map[code]['dmap'].get(d)) else '-'
+                     for code, _, _, _ in results]
+        f.write(','.join(row) + '\n')
+```
