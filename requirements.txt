@@ -1,2 +1,10 @@
 urllib3
 chinese_calendar
+
+chinese_calendar~=1.11.0
+requests~=2.34.2
+bs4~=0.0.2
+beautifulsoup4~=4.14.3
+pandas~=3.0.3
+akshare~=1.18.64
+plotly~=6.7.0

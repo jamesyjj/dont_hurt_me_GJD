@@ -85,25 +85,26 @@ def query_etf_info(sec_code: str) -> Optional[Dict]:
     conn.close()
     return results if results else None
 
-def query_securities_etf(sorted_by: str = 'volume') -> List[Tuple]:
+def query_securities_etf(sorted_by: str = 'volume', span: int = 1) -> List[Tuple]:
     """
     查询证券ETF份额变化
 
     Args:
         sorted_by: 'volume' 按份额排序, 'change' 按变化排序, 'pct' 按百分比排序
+        span: 跨度天数，1=对比前1个交易日，5=对比5个交易日前
 
     Returns:
-        查询结果列表
+        (results, latest_date, prev_date)
     """
     conn = get_connection()
     cursor = conn.cursor()
 
-    dates = get_latest_dates(2)
+    dates = get_latest_dates(span + 1)
     if len(dates) < 2:
         conn.close()
-        return []
+        return [], None, None
 
-    latest_date, prev_date = dates[0], dates[1]
+    latest_date, prev_date = dates[0], dates[-1]
 
     # 先获取所有证券相关ETF
     cursor.execute("""
@@ -116,6 +117,65 @@ def query_securities_etf(sorted_by: str = 'volume') -> List[Tuple]:
     if not target_codes:
         conn.close()
         return []
+
+    placeholders = ','.join(['?' for _ in target_codes])
+    order_col = {
+        'volume': 'd1.tot_vol DESC',
+        'change': 'change DESC',
+        'pct': 'pct_change DESC'
+    }.get(sorted_by, 'd1.tot_vol DESC')
+
+    query = f'''
+        SELECT d1.sec_code, i.full_name,
+               d1.tot_vol as vol_latest,
+               d0.tot_vol as vol_prev,
+               (d1.tot_vol - d0.tot_vol) as change,
+               (d1.tot_vol - d0.tot_vol) * 100.0 / d0.tot_vol as pct_change
+        FROM etf_daily_share d1
+        JOIN etf_daily_share d0 ON d1.sec_code = d0.sec_code
+        JOIN etf_info i ON d1.sec_code = i.sec_code
+        WHERE d1.stat_date = ? AND d0.stat_date = ?
+          AND d1.sec_code IN ({placeholders})
+        ORDER BY {order_col}
+    '''
+
+    cursor.execute(query, [latest_date, prev_date] + target_codes)
+    results = cursor.fetchall()
+    conn.close()
+    return results, latest_date, prev_date
+
+
+def query_industry_etf(keyword: str, sorted_by: str = 'volume', span: int = 1) -> List[Tuple]:
+    """按行业关键词查询ETF份额变化
+
+    Args:
+        keyword: 行业关键词，如 医药/银行/科技/消费/军工，支持模糊匹配
+        sorted_by: 'volume' 按份额排序, 'change' 按变化排序, 'pct' 按百分比排序
+        span: 跨度天数，1=对比前1个交易日，5=对比5个交易日前
+
+    Returns:
+        (results, latest_date, prev_date)
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    dates = get_latest_dates(span + 1)
+    if len(dates) < 2:
+        conn.close()
+        return [], None, None
+
+    latest_date, prev_date = dates[0], dates[-1]
+
+    cursor.execute("""
+        SELECT DISTINCT sec_code
+        FROM etf_info
+        WHERE full_name LIKE ? OR sec_name LIKE ?
+    """, (f'%{keyword}%', f'%{keyword}%'))
+    target_codes = [row[0] for row in cursor.fetchall()]
+
+    if not target_codes:
+        conn.close()
+        return [], latest_date, prev_date
 
     placeholders = ','.join(['?' for _ in target_codes])
     order_col = {

@@ -37,18 +37,25 @@ python -m src.etf.cli fetch 5
 
 ### 2. 证券ETF份额变化
 ```bash
-python -m src.etf.cli securities         # 按份额从高到低
-python -m src.etf.cli securities change   # 按变化从高到低
-python -m src.etf.cli securities pct      # 按增幅从高到低
+python -m src.etf.cli securities              # 按份额从高到低（近1日）
+python -m src.etf.cli securities change 5     # 按变化排序，近5日跨度
+python -m src.etf.cli securities pct 10       # 按增幅排序，近10日跨度
 ```
 
-### 3. 份额增加/增幅排行
+### 3. 行业ETF查询
+```bash
+python -m src.etf.cli industry 医药              # 医药行业（按份额，近1日）
+python -m src.etf.cli industry 医药 change 5     # 按变化排序，近5日跨度
+python -m src.etf.cli industry 银行 pct 10       # 按增幅排序，近10日跨度
+```
+
+### 4. 份额增加/增幅排行
 ```bash
 python -m src.etf.cli top 10      # 份额增加前10
 python -m src.etf.cli top_pct 10 # 份额增幅前10
 ```
 
-### 4. 特定ETF查询
+### 5. 特定ETF查询
 ```bash
 python -m src.etf.cli trend 510300   # 沪深300ETF（份额趋势）
 python -m src.etf.cli trend 512880   # 证券ETF
@@ -58,30 +65,30 @@ python -m src.etf.cli detail 513180 30    # 恒生科技ETF，近30天
 python -m src.etf.cli detail 512880       # 默认30天
 ```
 
-### 5. 检查数据完整性
+### 6. 检查数据完整性
 ```bash
 python -m src.etf.cli check
 ```
 
-### 6. 十大持有人数据
+### 7. 十大持有人数据
 ```bash
 python -m src.etf.cli holders              # 采集所有ETF十大持有人（从新浪财经）
 python -m src.etf.cli holders 512880       # 查看某ETF十大持有人
 python -m src.etf.cli holders_type 保险    # 按持有人类型查询（如：保险/信托/私募）
 ```
 
-### 7. 汇金系持仓ETF走势
+### 8. 汇金系持仓ETF走势
 ```bash
 # 控制台显示Top10汇金系持仓ETF近N天的份额/价格变化，全量导出CSV
 python -m src.etf.cli huijin 10
 ```
 
-### 8. 生成趋势图HTML
+### 9. 生成趋势图HTML
 ```bash
 python scripts/etf_trend.py 512880 500
 ```
 
-### 9. 生成ETF对比图
+### 10. 生成ETF对比图
 ```bash
 python scripts/etf_compare.py 510300 500
 ```

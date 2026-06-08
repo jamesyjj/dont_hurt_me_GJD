@@ -52,8 +52,11 @@ python -m src.etf.cli fetch 5
 # 查询份额上升的ETF
 python -m src.etf.cli query 126
 
-# 查看证券ETF份额变化
-python -m src.etf.cli securities
+# 查看证券ETF份额变化（支持排序 + 近N日跨度）
+python -m src.etf.cli securities change 5
+
+# 查看某行业ETF份额变化（支持排序 + 近N日跨度）
+python -m src.etf.cli industry 机器人 change 30
 
 # 份额增加前10名
 python -m src.etf.cli top 10
@@ -62,7 +65,7 @@ python -m src.etf.cli top 10
 python -m src.etf.cli top_pct 10
 
 # 查看某ETF趋势
-python -m src.etf.cli trend 512690
+python -m src.etf.cli trend 513300
 
 # 查看ETF份额-价格详细走势（含日变化/日收益/排名）
 python -m src.etf.cli detail 513180 30

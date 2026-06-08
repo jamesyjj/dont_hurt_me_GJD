@@ -28,8 +28,11 @@ etf-project/
 # 采集数据
 python -m src.etf.cli fetch 5
 
-# 查看证券ETF份额变化
-python -m src.etf.cli securities
+# 查看证券ETF份额变化（支持排序+近N日跨度）
+python -m src.etf.cli securities change 5
+
+# 查看某行业ETF份额变化（支持排序+近N日跨度）
+python -m src.etf.cli industry 医药 change 5
 
 # 份额增加前10
 python -m src.etf.cli top 10

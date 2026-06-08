@@ -12,6 +12,7 @@ from .queries import (
     query_etf_detail,
     query_huijin_etf_trend,
     query_securities_etf,
+    query_industry_etf,
     query_top_etfs,
     check_data_completeness, query_etf_info,
     query_top_holders, query_holders_by_type
@@ -46,7 +47,8 @@ ETF份额数据分析工具
     python -m src.etf.cli trend [代码]       # 查看某ETF趋势
     python -m src.etf.cli detail [代码] [天数]  # 查看ETF份额-价格详细走势
     python -m src.etf.cli check              # 检查数据完整性
-    python -m src.etf.cli securities          # 查看证券ETF份额变化
+    python -m src.etf.cli securities [sort] [天数]     # 证券/保险ETF，可选近N日跨度
+    python -m src.etf.cli industry <关键词> [sort] [天数]  # 行业ETF，可选近N日跨度
     python -m src.etf.cli top [n]           # 查看份额增加最多的n只ETF
     python -m src.etf.cli top_pct [n]       # 查看份额增幅最多的n只ETF
     python -m src.etf.cli update_names       # 更新ETF完整名称
@@ -186,11 +188,19 @@ ETF份额数据分析工具
             status = "OK" if cnt > 800 else "LOW"
             print(f"{date:<15} {cnt:<10} {status}")
     elif cmd == 'securities':
-        results, latest_date, prev_date = query_securities_etf('volume')
+        # 解析参数: [sort] [span]
+        sort, span = 'volume', 1
+        for a in sys.argv[2:]:
+            if a in ('volume', 'change', 'pct'):
+                sort = a
+            elif a.isdigit():
+                span = int(a)
+        results, latest_date, prev_date = query_securities_etf(sort, span)
         if not results:
             print('数据不足')
             return
-        print(f'\n证券/保险ETF份额变化 按份额从高到低 ({prev_date} -> {latest_date}):')
+        sort_label = {'volume': '按份额从高到低', 'change': '按变化从高到低', 'pct': '按增幅从高到低'}.get(sort, '按份额')
+        print(f'\n证券/保险ETF份额变化 {sort_label} ({prev_date} -> {latest_date}, 近{span}日):')
         print('=' * 120)
         print(f'{"代码":<10} {"名称":<20} {"上日份额(万)":>14} {"最新份额(万)":>14} {"变化(万)":>12} {"增幅":>10}')
         print('-' * 120)
@@ -198,6 +208,33 @@ ETF份额数据分析工具
             name = (row[1] or row[0])[:18]
             print(f'{row[0]:<10} {name:<20} {row[3]:>14.2f} {row[2]:>14.2f} {row[4]:>+12.2f} {row[5]:>+9.2f}%')
         print('=' * 120)
+    elif cmd == 'industry':
+        keyword = sys.argv[2] if len(sys.argv) > 2 else None
+        if not keyword:
+            print('用法: python -m src.etf.cli industry <关键词> [volume|change|pct] [天数]')
+            print('示例: python -m src.etf.cli industry 医药 change 5')
+            return
+        # 解析参数: [sort] [span]
+        sort, span = 'volume', 1
+        for a in sys.argv[3:]:
+            if a in ('volume', 'change', 'pct'):
+                sort = a
+            elif a.isdigit():
+                span = int(a)
+        results, latest_date, prev_date = query_industry_etf(keyword, sort, span)
+        if not results:
+            print(f'未找到包含 "{keyword}" 的ETF')
+            return
+        sort_label = {'volume': '按份额从高到低', 'change': '按变化从高到低', 'pct': '按增幅从高到低'}.get(sort, '按份额')
+        print(f'\n「{keyword}」行业ETF份额变化 {sort_label} ({prev_date} -> {latest_date}, 近{span}日)')
+        print('=' * 120)
+        print(f'{"代码":<10} {"名称":<20} {"上日份额(万)":>14} {"最新份额(万)":>14} {"变化(万)":>12} {"增幅":>10}')
+        print('-' * 120)
+        for row in results:
+            name = (row[1] or row[0])[:18]
+            print(f'{row[0]:<10} {name:<20} {row[3]:>14.2f} {row[2]:>14.2f} {row[4]:>+12.2f} {row[5]:>+9.2f}%')
+        print('=' * 120)
+        print(f'共 {len(results)} 只ETF')
     elif cmd == 'top':
         n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
         results, latest_date, prev_date = query_top_etfs(n, 'change')
