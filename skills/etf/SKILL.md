@@ -93,7 +93,17 @@ python scripts/etf_trend.py 512880 500
 python scripts/etf_compare.py 510300 500
 ```
 
-### 10. 价格-份额双折线图HTML
+### 11. 汇金系买卖趋势分析
+```bash
+# 固定基准日2025-12-31
+python scripts/huijin_analysis.py
+
+# 自定义起始日/结束日
+python scripts/huijin_trade.py 2025-12-31 2026-06-09
+python scripts/huijin_trade.py 2026-03-01 2026-06-09
+```
+
+### 12. 价格-份额双折线图HTML
 ```bash
 # 指定日期范围生成Plotly双折线图
 python scripts/etf_price_volume.py 513180 2026-05-01 2026-06-03

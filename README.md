@@ -56,7 +56,7 @@ python -m src.etf.cli query 126
 python -m src.etf.cli securities change 5
 
 # 查看某行业ETF份额变化（支持排序 + 近N日跨度）
-python -m src.etf.cli industry 机器人 change 30
+python -m src.etf.cli industry 医药 change 300
 
 # 份额增加前10名
 python -m src.etf.cli top 10
@@ -65,7 +65,7 @@ python -m src.etf.cli top 10
 python -m src.etf.cli top_pct 10
 
 # 查看某ETF趋势
-python -m src.etf.cli trend 513300
+python -m src.etf.cli trend 563360
 
 # 查看ETF份额-价格详细走势（含日变化/日收益/排名）
 python -m src.etf.cli detail 513180 30
@@ -80,7 +80,7 @@ python -m src.etf.cli update_names
 python -m src.etf.cli holders      
 
 # 查看某ETF十大持有人        
-python -m src.etf.cli holders 513180   
+python -m src.etf.cli holders 510300   
 
 # 按持有人类型查询（如：保险/信托/私募） 
 python -m src.etf.cli holders_type 汇金    
@@ -97,7 +97,7 @@ python -m src.etf.cli huijin 20
 python scripts/etf_trend.py 513180 500
 
 # ETF价格-份额双折线图
-python scripts/etf_price_volume.py 513180 2026-05-01 2026-06-03
+python scripts/etf_price_volume.py 512010 2025-05-01 2026-06-03
 
 # 对比两只ETF
 python scripts/etf_compare.py 512880 512070
@@ -105,8 +105,12 @@ python scripts/etf_compare.py 512880 512070
 # 查询某ETF的汇金系持仓及估算买卖情况
 python scripts/huijin_etf.py 510330
 
-# 汇金系ETF买卖趋势分析 基准日2025.12.31
+# 汇金系ETF买卖趋势分析（基准日2025.12.31，固定）
 python scripts/huijin_analysis.py
+
+# 汇金系买卖趋势分析（自定义起始日/结束日）
+python scripts/huijin_trade.py 2025-12-31 2026-06-09
+python scripts/huijin_trade.py 2026-06-04 2026-06-10
 
 
 ```

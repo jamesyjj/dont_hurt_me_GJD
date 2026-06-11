@@ -55,6 +55,9 @@ python scripts/etf_trend.py 512880 500
 # 生成对比图
 python scripts/etf_compare.py 510300 500
 
+# 汇金系买卖趋势分析（自定义日期范围）
+python scripts/huijin_trade.py 2025-12-31 2026-06-09
+
 # 汇金系持仓ETF份额/价格走势（控制台Top10 + CSV全量）
 python -m src.etf.cli huijin 10
 ```
