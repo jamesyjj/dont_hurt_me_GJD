@@ -16,12 +16,15 @@
 
 ```
 etf-project/
-├── src/etf/              # 核心包
+├── src/etf/              # ETF核心包
 │   ├── __init__.py
 │   ├── database.py       # 数据库操作
 │   ├── fetcher.py        # 数据拉取
 │   ├── queries.py        # 数据查询
 │   └── cli.py            # 命令行入口
+├── src/macro_economy/    # 宏观经济数据
+│   ├── __init__.py
+│   └── usa.py            # FRED数据获取
 ├── scripts/              # 独立脚本
 │   ├── etf_trend.py      # 趋势图生成
 │   └── etf_compare.py    # ETF对比工具
@@ -71,7 +74,7 @@ python -m src.etf.cli trend 563360
 python -m src.etf.cli detail 513180 30
 
 # 检查数据完整性
-python -m src.etf.cli check
+python -m src.etf.cli check [天数]    # 检查数据完整性（默认20天）
 
 # 更新ETF完整名称
 python -m src.etf.cli update_names
@@ -115,6 +118,20 @@ python scripts/huijin_trade.py 2026-06-04 2026-06-10
 
 ```
 
+### 宏观数据（FRED）
+
+```bash
+# 获取FRED数据并存入macro_index表（编辑usa.py切换series_id）
+python -m src.macro_economy.usa
+
+# 可用指标：
+#   CPIAUCSL  - 消费者物价指数（CPI，月频）
+#   UNRATE    - 失业率（月频）
+#   FEDFUNDS  - 联邦基金利率（月频）
+#
+# 建表DDL：data/sqlite3.sql
+```
+
 ## 数据库表结构
 
 ### etf_info - ETF基本信息
@@ -147,6 +164,23 @@ python scripts/huijin_trade.py 2026-06-04 2026-06-10
 | create_at | TEXT | 日期 |
 
 *数据来源：新浪财经基金档案页，每年4-5月更新年报，8-9月更新半年报。实时性约滞后4-5个月。*
+
+### macro_index - 宏观经济指标
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INTEGER | 自增主键 |
+| country | TEXT | 国家代码（US / CN / EU）|
+| indicator_code | TEXT | 指标代码（如 CPIAUCSL / UNRATE / FEDFUNDS）|
+| indicator_name | TEXT | 指标英文名 |
+| indicator_name_cn | TEXT | 指标中文名 |
+| frequency | TEXT | 频率（D=日 / W=周 / M=月 / Q=季），默认 'M' |
+| observation_date | DATE | 数据日期（核心维度）|
+| value | REAL | 数值 |
+| source | TEXT | 数据来源，默认 'FRED' |
+| create_time | TEXT | 创建时间 |
+
+> 唯一约束：(country, indicator_code, observation_date)，重复时更新全部字段。建表DDL：`data/sqlite3.sql`
 
 ## 数据来源
 

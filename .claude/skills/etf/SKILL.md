@@ -28,6 +28,26 @@ user-invocable: true
 
 **重要**: A股清算后数据才更新，约晚上8-10点后能查到当天数据。白天查不到当天数据是正常的。
 
+## 项目结构
+
+```
+etf-project/
+├── src/
+│   ├── etf/              # ETF核心包
+│   │   ├── cli.py        # CLI入口
+│   │   ├── queries.py    # 数据查询
+│   │   ├── fetcher.py    # 数据拉取
+│   │   └── database.py   # 数据库操作
+│   └── macro_economy/    # 宏观经济数据
+│       └── usa.py        # FRED数据获取
+├── scripts/              # 独立工具
+├── data/
+│   ├── etf_data.db       # SQLite数据库
+│   └── sqlite3.sql       # 建表DDL（macro_index等）
+├── skills/               # Claude Code技能
+└── tests/
+```
+
 ## 常用命令
 
 ### 1. 更新数据
@@ -67,7 +87,7 @@ python -m src.etf.cli detail 512880       # 默认30天
 
 ### 6. 检查数据完整性
 ```bash
-python -m src.etf.cli check
+python -m src.etf.cli check [天数]    # 检查数据完整性（默认20天）
 ```
 
 ### 7. 十大持有人数据
@@ -110,6 +130,20 @@ python scripts/etf_price_volume.py 513180 2026-05-01 2026-06-03
 # 依赖: pip install plotly
 ```
 
+### 13. 宏观数据（FRED）
+```bash
+# 获取FRED数据并存入macro_index表
+python -m src.macro_economy.usa
+
+# 可用的FRED series_id:
+#   CPIAUCSL  - 消费者物价指数（CPI，月频）
+#   UNRATE    - 失业率（月频）
+#   FEDFUNDS  - 联邦基金利率（月频）
+#   — 在 usa.py 的 if __name__ == '__main__' 中切换
+```
+
+**建表DDL**：`data/sqlite3.sql` 包含 `macro_index` 表的 CREATE TABLE 语句。
+
 ## 数据库字段说明
 
 ### etf_info - ETF基本信息
@@ -145,6 +179,25 @@ python scripts/etf_price_volume.py 513180 2026-05-01 2026-06-03
 | create_at | TEXT | 日期 |
 
 > 数据来源：新浪财经基金档案页，每年4-5月更新年报，8-9月更新半年报。实时性约滞后4-5个月。
+
+### macro_index - 宏观经济指标
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INTEGER | 自增主键 |
+| country | TEXT | 国家代码（US / CN / EU）|
+| indicator_code | TEXT | 指标代码（如 CPIAUCSL / UNRATE / FEDFUNDS）|
+| indicator_name | TEXT | 指标英文名 |
+| indicator_name_cn | TEXT | 指标中文名 |
+| frequency | TEXT | 频率（D=日 / W=周 / M=月 / Q=季），默认 'M' |
+| observation_date | DATE | 数据日期（核心维度）|
+| value | REAL | 数值 |
+| source | TEXT | 数据来源，默认 'FRED' |
+| create_time | TEXT | 创建时间 |
+
+> 唯一约束：(country, indicator_code, observation_date)，重复时更新全部字段。
+>
+> 建表DDL：`data/sqlite3.sql`
 
 ---
 

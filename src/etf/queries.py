@@ -383,8 +383,15 @@ def query_huijin_etf_trend(days: int = 10) -> List[Tuple]:
     return result
 
 
-def check_data_completeness() -> List[Tuple]:
-    """检查数据库数据完整性"""
+def check_data_completeness(days: int = 20) -> List[Tuple]:
+    """检查数据库数据完整性
+
+    Args:
+        days: 检查最近N天的数据
+
+    Returns:
+        [(stat_date, cnt), ...]  日期和当日ETF数量
+    """
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -393,8 +400,8 @@ def check_data_completeness() -> List[Tuple]:
         FROM etf_daily_share
         GROUP BY stat_date
         ORDER BY stat_date DESC
-        LIMIT 20
-    ''')
+        LIMIT ?
+    ''', (days,))
     daily_counts = cursor.fetchall()
     conn.close()
     return daily_counts

@@ -46,7 +46,7 @@ ETF份额数据分析工具
     python -m src.etf.cli query              # 查询份额上升的ETF
     python -m src.etf.cli trend [代码]       # 查看某ETF趋势
     python -m src.etf.cli detail [代码] [天数]  # 查看ETF份额-价格详细走势
-    python -m src.etf.cli check              # 检查数据完整性
+    python -m src.etf.cli check [天数]         # 检查数据完整性（默认20天）
     python -m src.etf.cli securities [sort] [天数]     # 证券/保险ETF，可选近N日跨度
     python -m src.etf.cli industry <关键词> [sort] [天数]  # 行业ETF，可选近N日跨度
     python -m src.etf.cli top [n]           # 查看份额增加最多的n只ETF
@@ -179,8 +179,9 @@ ETF份额数据分析工具
                 f.write(','.join(cells) + '\n')
         print(f'全量数据已导出: {csv_path}')
     elif cmd == 'check':
-        daily_counts = check_data_completeness()
-        print("Data Completeness Check:")
+        days = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isdigit() else 20
+        daily_counts = check_data_completeness(days)
+        print(f"Data Completeness Check (近{days}天):")
         print("=" * 50)
         print(f"{'Date':<15} {'ETF Count':<10} {'Status'}")
         print("-" * 50)
