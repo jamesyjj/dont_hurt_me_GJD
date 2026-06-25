@@ -64,8 +64,9 @@ python scripts/huijin_trade.py 2025-12-31 2026-06-09
 # 汇金系持仓ETF份额/价格走势（控制台Top10 + CSV全量）
 python -m src.etf.cli huijin 10
 
-# 获取FRED宏观数据（CPI/失业率/利率）
-python -m src.macro_economy.usa
+# 查询宏观数据系列（值和同比/环比增长）
+python -m src.etf.cli macro UNRATE              # 查询失业率当前月
+python -m src.etf.cli macro CPIAUCSL 2026-05    # 查询CPI指定月份
 ```
 
 ## 数据更新时机
@@ -86,5 +87,7 @@ python -m src.macro_economy.usa
 - `indicator_name_cn` - 指标中文名
 - `observation_date` - 数据日期
 - `value` - 数值
+- `yoy_growth` - 同比增长（YoY，%）
+- `mom_growth` - 环比增长（MoM，%）
 - 唯一约束：(country, indicator_code, observation_date)
 - 建表DDL：`data/sqlite3.sql`

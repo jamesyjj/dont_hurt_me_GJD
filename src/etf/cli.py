@@ -6,6 +6,7 @@ import os
 from .fetcher import fetch_data, update_full_names
 from .fetcher_szse import fetch_data as fetch_szse_data
 from .fetcher_holders import update_holders
+from ..macro_economy.usa import query_series
 from .queries import (
     query_rising_etfs,
     query_etf_trend,
@@ -56,6 +57,7 @@ ETF份额数据分析工具
     python -m src.etf.cli holders [代码]     # 查看某ETF十大持有人
     python -m src.etf.cli holders_type [关键词] # 按持有人类型查询(如:保险/信托/私募)
     python -m src.etf.cli huijin [天数]      # 汇金系持仓ETF份额/价格走势（控制台Top10+CSV全量）
+    python -m src.etf.cli macro [系列ID] [月份]  # 查询宏观数据系列值和同比/环比增长（默认当前月）
 """)
         sys.exit(1)
 
@@ -301,6 +303,18 @@ ETF份额数据分析工具
             print(f'{sec_code:<10} {name:<28} {holder_name[:34]:<36} {pct:>7.2f}% {stat_date}')
         print('=' * 110)
         print(f'共 {len(results)} 条结果（显示前50条）')
+    elif cmd == 'macro':
+        series_id = sys.argv[2] if len(sys.argv) > 2 else None
+        if series_id is None:
+            print("用法: python -m src.etf.cli macro <series_id> [月份]")
+            print("系列ID: CPIAUCSL / UNRATE / FEDFUNDS / CPILFESL / PPIACO / PCEPI / PCEPILFE / DGS10")
+            return
+        month = sys.argv[3] if len(sys.argv) > 3 else None
+        result = query_series(series_id, month=month)
+        if result["value"] is not None:
+            print(f"\n值: {result['value']}")
+            print(f"同比增长: {result['yoy']:+.4%}" if result['yoy'] is not None else "同比增长: N/A")
+            print(f"环比增长: {result['mom']:+.4%}" if result['mom'] is not None else "环比增长: N/A")
     else:
         print(f"Unknown command: {cmd}")
         print("Run without arguments to see usage")

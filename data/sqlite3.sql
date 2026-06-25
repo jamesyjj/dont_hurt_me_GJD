@@ -22,3 +22,9 @@ CREATE TABLE macro_index (
     create_time TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(country, indicator_code, observation_date)
 );
+
+ALTER TABLE macro_index
+ADD COLUMN yoy_growth REAL;
+
+ALTER TABLE macro_index
+ADD COLUMN mom_growth REAL;

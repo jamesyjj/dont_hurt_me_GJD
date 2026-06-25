@@ -120,16 +120,23 @@ python scripts/huijin_trade.py 2026-06-04 2026-06-10
 
 ### 宏观数据（FRED）
 
+通过 `src/macro_economy/usa.py` 从 FRED 获取宏观数据并存入 `macro_index` 表，
+数据结构见下方数据库表结构；建表DDL 见 `data/sqlite3.sql`。
+
 ```bash
-# 获取FRED数据并存入macro_index表（编辑usa.py切换series_id）
-python -m src.macro_economy.usa
+# 查询宏观数据系列（值和同比/环比增长，默认当前月）
+python -m src.etf.cli macro CPIAUCSL             # 查询CPI
+python -m src.etf.cli macro UNRATE 2026-05        # 查询失业率指定月份
 
 # 可用指标：
-#   CPIAUCSL  - 消费者物价指数（CPI，月频）
-#   UNRATE    - 失业率（月频）
-#   FEDFUNDS  - 联邦基金利率（月频）
-#
-# 建表DDL：data/sqlite3.sql
+#   CPIAUCSL   - 消费者物价指数（CPI，月频）
+#   UNRATE     - 失业率（月频）
+#   FEDFUNDS   - 联邦基金利率（月频）
+#   CPILFESL   - 核心CPI
+#   PPIACO     - 工业品出厂价格指数PPI
+#   PCEPI      - 个人消费支出价格指数PCE
+#   PCEPILFE   - 核心PCE
+#   DGS10      - 美国10年国债收益率
 ```
 
 ## 数据库表结构
@@ -177,6 +184,8 @@ python -m src.macro_economy.usa
 | frequency | TEXT | 频率（D=日 / W=周 / M=月 / Q=季），默认 'M' |
 | observation_date | DATE | 数据日期（核心维度）|
 | value | REAL | 数值 |
+| yoy_growth | REAL | 同比增长（YoY，%）|
+| mom_growth | REAL | 环比增长（MoM，%）|
 | source | TEXT | 数据来源，默认 'FRED' |
 | create_time | TEXT | 创建时间 |
 

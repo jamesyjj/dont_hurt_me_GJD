@@ -131,18 +131,26 @@ python scripts/etf_price_volume.py 513180 2026-05-01 2026-06-03
 ```
 
 ### 13. 宏观数据（FRED）
+
+通过 `src/macro_economy/usa.py` 从 FRED 获取宏观数据并存入 `macro_index` 表，
+数据结构见下方数据库字段说明；建表DDL 见 `data/sqlite3.sql`。
+
 ```bash
-# 获取FRED数据并存入macro_index表
-python -m src.macro_economy.usa
+# 查询宏观数据系列（值和同比/环比增长，默认当前月）
+python -m src.etf.cli macro CPIAUCSL             # 查询CPI当前月
+python -m src.etf.cli macro UNRATE 2026-05        # 查询失业率2026-05
+python -m src.etf.cli macro FEDFUNDS              # 联邦基金利率
 
 # 可用的FRED series_id:
-#   CPIAUCSL  - 消费者物价指数（CPI，月频）
-#   UNRATE    - 失业率（月频）
-#   FEDFUNDS  - 联邦基金利率（月频）
-#   — 在 usa.py 的 if __name__ == '__main__' 中切换
+#   CPIAUCSL   - 消费者物价指数（CPI，月频）
+#   UNRATE     - 失业率（月频）
+#   FEDFUNDS   - 联邦基金利率（月频）
+#   CPILFESL   - 核心CPI（月频）
+#   PPIACO     - 工业品出厂价格指数PPI（月频）
+#   PCEPI      - 个人消费支出价格指数PCE（月频）
+#   PCEPILFE   - 核心PCE（月频）
+#   DGS10      - 美国10年国债收益率（月频）
 ```
-
-**建表DDL**：`data/sqlite3.sql` 包含 `macro_index` 表的 CREATE TABLE 语句。
 
 ## 数据库字段说明
 
@@ -192,6 +200,8 @@ python -m src.macro_economy.usa
 | frequency | TEXT | 频率（D=日 / W=周 / M=月 / Q=季），默认 'M' |
 | observation_date | DATE | 数据日期（核心维度）|
 | value | REAL | 数值 |
+| yoy_growth | REAL | 同比增长（YoY，%）|
+| mom_growth | REAL | 环比增长（MoM，%）|
 | source | TEXT | 数据来源，默认 'FRED' |
 | create_time | TEXT | 创建时间 |
 
