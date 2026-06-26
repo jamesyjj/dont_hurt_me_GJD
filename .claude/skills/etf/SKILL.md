@@ -8,21 +8,25 @@ user-invocable: true
 
 基于上海证券交易所数据的ETF份额分析工具。
 
+## 行为约束
+
+**强制规则1**: 当用户下达的命令存在歧义或不明确时，必须先向用户询问澄清，待用户明确答复后再执行操作。禁止自行猜测用户意图并直接操作。
+
+**强制规则2**: 所有数据分析命令（查询、排行、趋势、图表等）只允许进行数据库**读操作**，禁止执行任何 INSERT、UPDATE、DELETE 等写操作。如需更新数据，必须明确调用 `fetch` 命令或经用户确认后方可执行。
+
 ## 文档同步约定
 
-当用户说「更新skill」「更新readme」「同步文档」等指令时，必须同步更新以下 **4个文件**：
+### 触发规则
 
-| 文件 | 说明 |
-|------|------|
-| `.claude/skills/etf/SKILL.md` | Claude Code 技能定义（主） |
-| `skills/etf/SKILL.md` | 项目内技能副本（与上保持完全一致） |
-| `README.md` | 项目说明文档 |
-| `CLAUDE.md` | 项目级 Claude 指令 |
+| 用户指令 | 需要更新的文件 |
+|----------|---------------|
+| 「更新skill」 | `.claude/skills/etf/SKILL.md`（主） |
+| 「更新readme」 | `README.md` |
+| 「更新文档」/「同步文档」/「更新所有文档」 | 全部3个文件（SKILL.md + README.md + CLAUDE.md） |
 
-**同步规则**：
-- 新增 CLI 命令或脚本 → 4个文件都要加
-- SKILL.md 两份文件内容必须完全一致，用 `cp` 同步
-- README.md 和 CLAUDE.md 的命令列表保持对齐
+- **`CLAUDE.md` 只在「更新文档」等全量同步指令时更新**，不随单文件操作自动更新。
+- 新增 CLI 命令或脚本时，同样遵循此规则。
+- README.md 和 CLAUDE.md 的命令列表保持对齐。
 
 ## 数据更新时机
 
@@ -38,12 +42,18 @@ etf-project/
 │   │   ├── queries.py    # 数据查询
 │   │   ├── fetcher.py    # 数据拉取
 │   │   └── database.py   # 数据库操作
+│   ├── index/            # 指数数据
+│   │   ├── fetcher_index.py  # 指数K线拉取（东方财富）
+│   │   ├── sector_index.py   # 行业板块指数（akshare）
+│   │   └── foreign_index/    # 海外指数
+│   │       ├── american_index.py  # 美股三大指数
+│   │       └── etf_qd2.py         # QDII跨境指数
 │   └── macro_economy/    # 宏观经济数据
 │       └── usa.py        # FRED数据获取
 ├── scripts/              # 独立工具
 ├── data/
 │   ├── etf_data.db       # SQLite数据库
-│   └── sqlite3.sql       # 建表DDL（macro_index等）
+│   └── sqlite3.sql       # 建表DDL（macro_index、index_daily等）
 ├── skills/               # Claude Code技能
 └── tests/
 ```
@@ -209,6 +219,58 @@ python -m src.etf.cli macro FEDFUNDS              # 联邦基金利率
 >
 > 建表DDL：`data/sqlite3.sql`
 
+### index_info - 指数基本信息
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| index_code | TEXT | 指数代码 (PK)，如 000300、399006 |
+| index_name | TEXT | 指数名称 |
+| market | TEXT | 交易所（SH / SZ / HK / US） |
+| publisher | TEXT | 发布机构（如 中证指数有限公司） |
+| category | TEXT | 分类（宽基 / 行业 / 主题 / 策略 等） |
+| currency | TEXT | 币种，默认 'CNY' |
+| create_time | TEXT | 创建时间 |
+| update_time | TEXT | 更新时间 |
+
+### index_daily - 指数日线数据
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| index_code | TEXT | 指数代码（逻辑外键 → index_info.index_code） |
+| trade_date | INTEGER | 交易日（YYYYMMDD，如 20260626） |
+| open | REAL | 开盘价 |
+| high | REAL | 最高价 |
+| low | REAL | 最低价 |
+| close | REAL | 收盘价 |
+| volume | REAL | 成交量 |
+| amount | REAL | 成交额 |
+| amplitude | REAL | 振幅（%） |
+| change_percent | REAL | 涨跌幅（%） |
+| change_amount | REAL | 涨跌额 |
+| turnover_rate | REAL | 换手率（指数通常为空） |
+| source | TEXT | 数据来源（akshare / eastmoney / manual …） |
+| create_time | TEXT | 创建时间 |
+| update_time | TEXT | 更新时间 |
+
+> 主键：(index_code, trade_date)。另有 `trade_date`、`source` 索引。
+
+### update_log - 数据更新日志
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INTEGER | 自增主键 |
+| module | TEXT | 模块名（index / macro / etf / stock …） |
+| target_code | TEXT | 目标代码（如 000300 / CPIAUCSL） |
+| update_type | TEXT | 更新类型（full / increment / manual） |
+| start_time | TEXT | 开始时间 |
+| end_time | TEXT | 结束时间 |
+| last_trade_date | INTEGER | 更新到的数据日期（YYYYMMDD） |
+| status | INTEGER | 状态（1=成功 0=失败） |
+| message | TEXT | 错误信息或备注 |
+| create_time | TEXT | 创建时间 |
+
+> 另有 `module`、`target_code`、`create_time`、`status` 索引。
+
 ---
 
 ## 编码模板：新增CLI命令
@@ -299,7 +361,7 @@ from .queries import (
 ### 步骤3（可选）：同步更新文档
 
 更新以下文件中的命令列表：
-- `skills/etf/SKILL.md` 和 `.claude/skills/etf/SKILL.md` — 添加命令说明
+- `.claude/skills/etf/SKILL.md` — 添加命令说明
 - `CLAUDE.md` — 添加一行示例
 - `README.md` — 添加一行示例
 
