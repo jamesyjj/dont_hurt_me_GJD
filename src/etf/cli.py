@@ -313,8 +313,8 @@ ETF份额数据分析工具
         result = query_series(series_id, month=month)
         if result["value"] is not None:
             print(f"\n值: {result['value']}")
-            print(f"同比增长: {result['yoy']:+.4%}" if result['yoy'] is not None else "同比增长: N/A")
-            print(f"环比增长: {result['mom']:+.4%}" if result['mom'] is not None else "环比增长: N/A")
+            print(f"同比增长: {result['yoy']:+.5f}%" if result['yoy'] is not None else "同比增长: N/A")
+            print(f"环比增长: {result['mom']:+.5f}%" if result['mom'] is not None else "环比增长: N/A")
     else:
         print(f"Unknown command: {cmd}")
         print("Run without arguments to see usage")

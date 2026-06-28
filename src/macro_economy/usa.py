@@ -27,10 +27,10 @@ FRED_SERIES = {
 }
 
 
-def get_gdp():
-    """获取美国GDP数据（akshare）"""
-    macro_usa_gdp_monthly_df = ak.macro_usa_gdp_monthly()
-    print(macro_usa_gdp_monthly_df)
+# def get_gdp():
+#     """获取美国GDP数据（akshare）"""
+#     macro_usa_gdp_monthly_df = ak.macro_usa_gdp_monthly()
+#     print(macro_usa_gdp_monthly_df)
 
 # 获取fred数据
 # req: 所需数据全称
@@ -56,8 +56,8 @@ def get_fred(series_id: str) -> pd.DataFrame:
     return df
 
 
-def calc_yoy_growth(month: str, series_id: str, country: str = "US") -> float | None:
-    """计算同比增长（YoY）——本月值 / 去年同月值 - 1
+def cal_yoy_growth(month: str, series_id: str, country: str = "US") -> float | None:
+    """计算同比增长（YoY）——(本月值 / 去年同月值 - 1) × 100
 
     Args:
         month: 月份，格式 "YYYY-MM"，如 "2026-06"
@@ -65,7 +65,7 @@ def calc_yoy_growth(month: str, series_id: str, country: str = "US") -> float | 
         country: 国家代码，默认 US
 
     Returns:
-        同比增长率（小数），如 0.032 表示 +3.2%；数据不足时返回 None
+        同比增长率（%值，保留5位小数），如 3.25000 表示 +3.25%；数据不足时返回 None
     """
     year, mon = month.split("-")
     current_month = f"{year}-{mon}"
@@ -99,11 +99,11 @@ def calc_yoy_growth(month: str, series_id: str, country: str = "US") -> float | 
     if last_year_val == 0:
         return None
 
-    return (current_val - last_year_val) / last_year_val
+    return round((current_val - last_year_val) / last_year_val * 100, 5)
 
 
-def calc_mom_growth(month: str, series_id: str, country: str = "US") -> float | None:
-    """计算环比增长（MoM）——本月值 / 上月值 - 1
+def cal_mom_growth(month: str, series_id: str, country: str = "US") -> float | None:
+    """计算环比增长（MoM）——(本月值 / 上月值 - 1) × 100
 
     Args:
         month: 月份，格式 "YYYY-MM"，如 "2026-06"
@@ -111,7 +111,7 @@ def calc_mom_growth(month: str, series_id: str, country: str = "US") -> float | 
         country: 国家代码，默认 US
 
     Returns:
-        环比增长率（小数），如 -0.001 表示 -0.1%；数据不足时返回 None
+        环比增长率（%值，保留5位小数），如 -0.10000 表示 -0.1%；数据不足时返回 None
     """
     conn = sqlite3.connect(_get_db_path())
     cursor = conn.cursor()
@@ -133,7 +133,7 @@ def calc_mom_growth(month: str, series_id: str, country: str = "US") -> float | 
     if prev_val == 0:
         return None
 
-    return (current_val - prev_val) / prev_val
+    return round((current_val - prev_val) / prev_val * 100, 5)
 
 
 def query_series(series_id: str, month: str = None, country: str = "US"):
@@ -171,8 +171,8 @@ def query_series(series_id: str, month: str = None, country: str = "US"):
         return {"value": None, "yoy": None, "mom": None}
 
     value, yoy, mom = row
-    yoy_str = f"{yoy:+.3%}" if yoy is not None else "N/A"
-    mom_str = f"{mom:+.3%}" if mom is not None else "N/A"
+    yoy_str = f"{yoy:+.5f}%" if yoy is not None else "N/A"
+    mom_str = f"{mom:+.5f}%" if mom is not None else "N/A"
     print(f"{name_cn}({series_id}) {month}: 值={value}  同比={yoy_str}  环比={mom_str}")
     return {"value": value, "yoy": yoy, "mom": mom}
 
@@ -237,7 +237,7 @@ def save_to_sqlite(df: pd.DataFrame, series_id: str, country: str = "US"):
 
 
 def save_yoy_growth(month: str, series_id: str, country: str = "US") -> float | None:
-    """计算并保存同比增长（YoY）到 macro_index.yoy_growth
+    """计算并保存同比增长（YoY）到 macro_index.yoy_growth（%值）
 
     Args:
         month: 月份，格式 "YYYY-MM"
@@ -245,9 +245,9 @@ def save_yoy_growth(month: str, series_id: str, country: str = "US") -> float | 
         country: 国家代码，默认 US
 
     Returns:
-        保存的同比增长率，数据不足时返回 None
+        保存的同比增长率（%值，如 3.2 表示 +3.2%），数据不足时返回 None
     """
-    growth = calc_yoy_growth(month, series_id, country)
+    growth = cal_yoy_growth(month, series_id, country)
     if growth is None:
         print(f"数据不足，无法计算 {series_id} {month} 同比增长")
         return None
@@ -262,12 +262,12 @@ def save_yoy_growth(month: str, series_id: str, country: str = "US") -> float | 
     """, (growth, country, series_id, month))
     conn.commit()
     conn.close()
-    print(f"已保存 {series_id} {month} 同比增长: {growth:+.4%}")
+    print(f"已保存 {series_id} {month} 同比增长: {growth:+.5f}%")
     return growth
 
 
 def save_mom_growth(month: str, series_id: str, country: str = "US") -> float | None:
-    """计算并保存环比增长（MoM）到 macro_index.mom_growth
+    """计算并保存环比增长（MoM）到 macro_index.mom_growth（%值）
 
     Args:
         month: 月份，格式 "YYYY-MM"
@@ -275,9 +275,9 @@ def save_mom_growth(month: str, series_id: str, country: str = "US") -> float | 
         country: 国家代码，默认 US
 
     Returns:
-        保存的环比增长率，数据不足时返回 None
+        保存的环比增长率（%值，如 -0.1 表示 -0.1%），数据不足时返回 None
     """
-    growth = calc_mom_growth(month, series_id, country)
+    growth = cal_mom_growth(month, series_id, country)
     if growth is None:
         print(f"数据不足，无法计算 {series_id} {month} 环比增长")
         return None
@@ -292,7 +292,7 @@ def save_mom_growth(month: str, series_id: str, country: str = "US") -> float | 
     """, (growth, country, series_id, month))
     conn.commit()
     conn.close()
-    print(f"已保存 {series_id} {month} 环比增长: {growth:+.4%}")
+    print(f"已保存 {series_id} {month} 环比增长: {growth:+.5f}%")
     return growth
 
 
@@ -362,10 +362,10 @@ def fetch_and_save_all(calc_growth: bool = True, country: str = "US"):
     today = datetime.date.today()
     month = today.strftime("%Y-%m")
     for series_id, (_, name_cn, _) in FRED_SERIES.items():
-        yoy = calc_yoy_growth(month, series_id, country)
-        mom = calc_mom_growth(month, series_id, country)
-        yoy_str = f"{yoy:+.3%}" if yoy is not None else "N/A"
-        mom_str = f"{mom:+.3%}" if mom is not None else "N/A"
+        yoy = cal_yoy_growth(month, series_id, country)
+        mom = cal_mom_growth(month, series_id, country)
+        yoy_str = f"{yoy:+.5f}%" if yoy is not None else "N/A"
+        mom_str = f"{mom:+.5f}%" if mom is not None else "N/A"
         print(f"{name_cn:<24} 同比 {yoy_str:>10}  环比 {mom_str:>10}")
 
 
@@ -373,7 +373,7 @@ def fetch_and_save_all(calc_growth: bool = True, country: str = "US"):
 
 
 if __name__ == '__main__':
-    series_id = "CPIAUCSL"
+    # series_id = "CPIAUCSL"
     # df = get_fred(series_id)
 
     # save_to_sqlite(df, series_id=series_id, country="US")
@@ -383,10 +383,10 @@ if __name__ == '__main__':
     #     df = get_fred(sid)
     #     save_to_sqlite(df, series_id=sid, country="US")
 
-    # res = calc_yoy_growth("2026-05", series_id, country="US")
+    # res = cal_yoy_growth("2026-05", series_id, country="US")
     # print(res)
     # update_all_growth(series_id, country="US")
 
-    # fetch_and_save_all(calc_growth=True)
+    fetch_and_save_all(calc_growth=True)
 
-    query_series(series_id)
+    # query_series(series_id)

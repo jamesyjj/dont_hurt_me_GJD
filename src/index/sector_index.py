@@ -3,12 +3,13 @@ import sys
 import os
 
 import akshare as ak
+import pandas as pd
 
 # 允许从项目根导入 src.etf.database
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from src.etf.database import get_connection
 
-def get_index_info_cn():
+def fetch_index_info_cn():
     """从 akshare 获取全量指数列表，写入 index_info 表。"""
     df = ak.index_stock_info()
     if df is None or df.empty:
@@ -72,11 +73,17 @@ def _determine_symbol(index_code: str) -> tuple:
         return f'sz{code}', code
 
 
-def get_sector_index(index_code: str):
-    """抓取指定指数的历史日线数据，写入 index_daily 表。
+def fetch_sector_index(index_code: str):
+    """抓取A股指数的历史日线数据（akshare），写入 index_daily 表。
+
+    从 akshare 拉取日线，由收盘价自行计算 change_percent（%值，保留5位小数）；
+    amplitude / turnover_rate 来自 akshare 已是%值，保留2位小数。
 
     Args:
         index_code: 指数代码，如 000300、sh000300、399006
+
+    Returns:
+        写入的日线条数
     """
     symbol, clean_code = _determine_symbol(index_code)
 
@@ -86,7 +93,7 @@ def get_sector_index(index_code: str):
         print(f'[sector_index] 未获取到数据: {symbol}')
         return 0
 
-    # 2. 列名映射（akshare 英文列名 → index_daily 字段）
+    # 2. 列名映射（akshare 英文列名 → index_daily 字段；change_percent 由收盘价自行计算，amplitude/turnover_rate 来自 akshare 已是%值）
     col_map = {
         'date': 'trade_date',
         'open': 'open',
@@ -96,17 +103,17 @@ def get_sector_index(index_code: str):
         'volume': 'volume',
         'amount': 'amount',
         'amplitude': 'amplitude',
-        'pct_change': 'change_percent',
-        'change': 'change_amount',
         'turnover_rate': 'turnover_rate',
     }
-    df_renamed = df.rename(columns=col_map)
+    df = df.rename(columns=col_map)
 
-    # 3. 构造 index_daily 所需字段
+    # 3. 构造 index_daily 所需字段（按日期正向排序，从收盘价计算涨跌幅(%)/涨跌额）
+    df = df.sort_values('trade_date')
     records = []
+    prev_close = None
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    for _, row in df_renamed.iterrows():
+    for _, row in df.iterrows():
         raw_date = row.get('trade_date')
         if raw_date is None:
             continue
@@ -115,19 +122,33 @@ def get_sector_index(index_code: str):
         else:
             trade_date = int(str(raw_date).replace('-', '')[:8])
 
+        close = row.get('close')
+        if pd.notna(close):
+            close = float(close)
+        else:
+            close = None
+
+        # 从收盘价计算涨跌幅(%)和涨跌额
+        change_percent = None
+        change_amount = None
+        if close is not None and prev_close is not None and prev_close != 0:
+            change_amount = close - prev_close
+            change_percent = round(change_amount / prev_close * 100, 5)  # %值，保留5位小数
+        prev_close = close
+
         rec = {
             'index_code': clean_code,
             'trade_date': trade_date,
             'open': row.get('open'),
             'high': row.get('high'),
             'low': row.get('low'),
-            'close': row.get('close'),
+            'close': close,
             'volume': row.get('volume'),
             'amount': row.get('amount'),
-            'amplitude': row.get('amplitude'),
-            'change_percent': row.get('change_percent'),
-            'change_amount': row.get('change_amount'),
-            'turnover_rate': row.get('turnover_rate'),
+            'amplitude': round(float(row.get('amplitude')), 2) if pd.notna(row.get('amplitude')) else None,  # %值，保留2位小数
+            'change_percent': change_percent,
+            'change_amount': change_amount,
+            'turnover_rate': round(float(row.get('turnover_rate')), 2) if pd.notna(row.get('turnover_rate')) else None,  # %值，保留2位小数
             'source': 'akshare',
             'create_time': now,
             'update_time': now,
@@ -168,6 +189,6 @@ def get_sector_index(index_code: str):
 
 if __name__ == '__main__':
     # 示例：获取全量指数列表并入库
-    get_index_info_cn()
+    fetch_index_info_cn()
     # 示例：抓取深圳399552（证券龙头）指数日线
-    # get_sector_index('sz399552')
+    # fetch_sector_index('sz399552')

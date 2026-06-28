@@ -24,10 +24,10 @@ CREATE TABLE macro_index (
 );
 
 ALTER TABLE macro_index
-ADD COLUMN yoy_growth REAL;
+ADD COLUMN yoy_growth REAL;  -- 同比 单位%
 
 ALTER TABLE macro_index
-ADD COLUMN mom_growth REAL;
+ADD COLUMN mom_growth REAL;  -- 环比 单位%
 
 
 -- DROP TABLE IF EXISTS index_info;
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS index_daily (
     change_percent  REAL,                               -- 涨跌幅（%）
     change_amount   REAL,                               -- 涨跌额
 
-    turnover_rate   REAL,                               -- 换手率（指数通常为空）
+    turnover_rate   REAL,                               -- 换手率（指数通常为空，%）
 
     source          TEXT NOT NULL,                      -- 数据来源：akshare、eastmoney、manual...
 
