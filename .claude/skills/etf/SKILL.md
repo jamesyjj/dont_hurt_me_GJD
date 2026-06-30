@@ -79,10 +79,12 @@ python -m src.etf.cli industry 医药 change 5     # 按变化排序，近5日�
 python -m src.etf.cli industry 银行 pct 10       # 按增幅排序，近10日跨度
 ```
 
-### 4. 份额增加/增幅排行
+### 4. 份额增减排行
 ```bash
-python -m src.etf.cli top 10      # 份额增加前10
-python -m src.etf.cli top_pct 10 # 份额增幅前10
+python -m src.etf.cli top 10        # 份额增加前10
+python -m src.etf.cli top_pct 10   # 份额增幅前10
+python -m src.etf.cli bottom 10      # 份额减少前10
+python -m src.etf.cli bottom_pct 10  # 份额降幅前10
 ```
 
 ### 5. 特定ETF查询

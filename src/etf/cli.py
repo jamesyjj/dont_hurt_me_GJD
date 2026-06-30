@@ -15,6 +15,7 @@ from .queries import (
     query_securities_etf,
     query_industry_etf,
     query_top_etfs,
+    query_bottom_etfs,
     check_data_completeness, query_etf_info,
     query_top_holders, query_holders_by_type
 )
@@ -52,6 +53,8 @@ ETF份额数据分析工具
     python -m src.etf.cli industry <关键词> [sort] [天数]  # 行业ETF，可选近N日跨度
     python -m src.etf.cli top [n]           # 查看份额增加最多的n只ETF
     python -m src.etf.cli top_pct [n]       # 查看份额增幅最多的n只ETF
+    python -m src.etf.cli bottom [n]         # 查看份额减少最多的n只ETF
+    python -m src.etf.cli bottom_pct [n]     # 查看份额降幅最多的n只ETF
     python -m src.etf.cli update_names       # 更新ETF完整名称
     python -m src.etf.cli holders            # 采集所有ETF十大持有人数据
     python -m src.etf.cli holders [代码]     # 查看某ETF十大持有人
@@ -259,6 +262,32 @@ ETF份额数据分析工具
         print(f'\n份额增幅前{n}名 ({prev_date} -> {latest_date}):')
         print('=' * 120)
         print(f'{"排名":<4} {"代码":<10} {"名称":<20} {"最新份额(万)":>16} {"变化(万)":>12} {"增幅":>10}')
+        print('-' * 120)
+        for i, row in enumerate(results, 1):
+            name = (row[1] or row[0])[:18]
+            print(f'{i:<4} {row[0]:<10} {name:<20} {row[2]:>16.2f} {row[4]:>+12.2f} {row[5]:>+9.2f}%')
+        print('=' * 120)
+    elif cmd == 'bottom':
+        n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+        results, latest_date, prev_date = query_bottom_etfs(n, 'change')
+        if not results:
+            return
+        print(f'\n份额减少前{n}名 ({prev_date} -> {latest_date}):')
+        print('=' * 120)
+        print(f'{"排名":<4} {"代码":<10} {"名称":<20} {"最新份额(万)":>16} {"变化(万)":>12} {"增幅":>10}')
+        print('-' * 120)
+        for i, row in enumerate(results, 1):
+            name = (row[1] or row[0])[:18]
+            print(f'{i:<4} {row[0]:<10} {name:<20} {row[2]:>16.2f} {row[4]:>+12.2f} {row[5]:>+9.2f}%')
+        print('=' * 120)
+    elif cmd == 'bottom_pct':
+        n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+        results, latest_date, prev_date = query_bottom_etfs(n, 'pct')
+        if not results:
+            return
+        print(f'\n份额降幅前{n}名 ({prev_date} -> {latest_date}):')
+        print('=' * 120)
+        print(f'{"排名":<4} {"代码":<10} {"名称":<20} {"最新份额(万)":>16} {"变化(万)":>12} {"降幅":>10}')
         print('-' * 120)
         for i, row in enumerate(results, 1):
             name = (row[1] or row[0])[:18]

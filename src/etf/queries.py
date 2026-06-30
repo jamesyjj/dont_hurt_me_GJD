@@ -251,6 +251,53 @@ def query_top_etfs(n: int = 10, by: str = 'change') -> Tuple:
     return results, latest_date, prev_date
 
 
+def query_bottom_etfs(n: int = 10, by: str = 'change') -> Tuple:
+    """
+    查询份额减少最多的ETF
+
+    Args:
+        n: 返回数量
+        by: 'change' 按绝对变化, 'pct' 按百分比变化（降幅最大优先）
+
+    Returns:
+        (results, latest_date, prev_date)
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    dates = get_latest_dates(2)
+    if len(dates) < 2:
+        conn.close()
+        return [], None, None
+
+    latest_date, prev_date = dates[0], dates[1]
+
+    if by == 'pct':
+        order_clause = 'pct_change ASC'
+    else:
+        order_clause = 'change ASC'
+
+    query = '''
+        SELECT d1.sec_code, i.full_name,
+               d1.tot_vol as vol_latest,
+               d0.tot_vol as vol_prev,
+               (d1.tot_vol - d0.tot_vol) as change,
+               (d1.tot_vol - d0.tot_vol) * 100.0 / d0.tot_vol as pct_change
+        FROM etf_daily_share d1
+        JOIN etf_daily_share d0 ON d1.sec_code = d0.sec_code
+        JOIN etf_info i ON d1.sec_code = i.sec_code
+        WHERE d1.stat_date = ? AND d0.stat_date = ?
+          AND d0.tot_vol > 0
+        ORDER BY {order_clause}
+        LIMIT ?
+    '''.format(order_clause=order_clause)
+
+    cursor.execute(query, [latest_date, prev_date, n])
+    results = cursor.fetchall()
+    conn.close()
+    return results, latest_date, prev_date
+
+
 def query_etf_detail(sec_code: str, days: int = 30) -> List[Tuple]:
     """查询某ETF的份额+价格+排名详细走势
 

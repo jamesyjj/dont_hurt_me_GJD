@@ -75,10 +75,16 @@ python -m src.etf.cli securities change 5
 python -m src.etf.cli industry 保险 change 300
 
 # 份额增加前10名
-python -m src.etf.cli top 10
+python -m src.etf.cli top 20
 
 # 份额增幅前10名
 python -m src.etf.cli top_pct 10
+
+# 份额减少前10名
+python -m src.etf.cli bottom 20
+
+# 份额降幅前10名
+python -m src.etf.cli bottom_pct 10
 
 # 查看某ETF趋势
 python -m src.etf.cli trend 513180

@@ -312,6 +312,6 @@ def fetch_index_daily_hk_now_em():
 
 
 if __name__ == '__main__':
-    fetch_index_daily_hk("HSI")
-    fetch_index_daily_hk_now()
+    fetch_index_daily_hk("HSMBI")
+    # fetch_index_daily_hk_now()
     # fetch_index_daily_hk_now_em()

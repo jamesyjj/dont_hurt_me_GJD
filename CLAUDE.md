@@ -54,6 +54,12 @@ python -m src.etf.cli top 10
 # 份额增幅前10
 python -m src.etf.cli top_pct 10
 
+# 份额减少前10
+python -m src.etf.cli bottom 10
+
+# 份额降幅前10
+python -m src.etf.cli bottom_pct 10
+
 # 查看某ETF趋势
 python -m src.etf.cli trend 512880
 
